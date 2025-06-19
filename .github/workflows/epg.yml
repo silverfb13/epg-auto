@@ -1,0 +1,30 @@
+name: Atualizar EPG a cada 10 minutos
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'  # A cada 10 minutos
+  workflow_dispatch:         # Também permite execução manual
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v3
+
+      - name: Instalar dependências
+        run: sudo apt update && sudo apt install -y wget gzip
+
+      - name: Baixar e descompactar o EPG
+        run: |
+          wget -O epg.xml.gz "https://epgshare01.online/epgshare01/epg_ripper_BR1.xml.gz"
+          gunzip -f epg.xml.gz
+
+      - name: Commit e push (somente se houver mudanças)
+        run: |
+          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.name "github-actions"
+          git add epg.xml
+          git diff --cached --quiet && echo "Sem mudanças no EPG, não precisa dar push." || git commit -m "Atualização automática do EPG"
+          git push || echo "Push ignorado (sem mudanças ou branch protegida)"
